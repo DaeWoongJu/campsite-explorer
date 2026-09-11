@@ -68,6 +68,48 @@ export function hasLiveApi(): boolean {
   return Boolean(process.env.GOCAMPING_API_KEY);
 }
 
+const PAGE_SIZE = 500;
+
+async function fetchPage(
+  apiKey: string,
+  pageNo: number
+): Promise<{ items: GoCampingItem[]; totalCount: number }> {
+  const url = new URL(GOCAMPING_BASE_URL);
+  url.searchParams.set("serviceKey", apiKey);
+  url.searchParams.set("numOfRows", String(PAGE_SIZE));
+  url.searchParams.set("pageNo", String(pageNo));
+  url.searchParams.set("MobileOS", "ETC");
+  url.searchParams.set("MobileApp", "CampsiteExplorer");
+  url.searchParams.set("_type", "json");
+
+  const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
+  if (!res.ok) throw new Error(`GoCamping API error: ${res.status}`);
+  const data: GoCampingResponse = await res.json();
+  const items = data.response.body.items;
+  return {
+    items: items ? items.item : [],
+    totalCount: data.response.body.totalCount,
+  };
+}
+
+async function fetchAllFromGoCamping(apiKey: string): Promise<Campsite[]> {
+  const first = await fetchPage(apiKey, 1);
+  const totalPages = Math.ceil(first.totalCount / PAGE_SIZE);
+
+  const restPages = await Promise.all(
+    Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) =>
+      fetchPage(apiKey, i + 2)
+    )
+  );
+
+  const allItems = [first, ...restPages].flatMap((p) => p.items);
+  return allItems.filter((i) => i.mapX && i.mapY).map(normalize);
+}
+
+let cachedCampsites: Campsite[] | null = null;
+let cachedAt = 0;
+const CACHE_TTL_MS = 60 * 60 * 1000;
+
 export async function getCampsites(query?: string): Promise<Campsite[]> {
   const apiKey = process.env.GOCAMPING_API_KEY;
 
@@ -75,24 +117,12 @@ export async function getCampsites(query?: string): Promise<Campsite[]> {
     return filterByQuery(MOCK_CAMPSITES, query);
   }
 
-  const url = new URL(GOCAMPING_BASE_URL);
-  url.searchParams.set("serviceKey", apiKey);
-  url.searchParams.set("numOfRows", "200");
-  url.searchParams.set("pageNo", "1");
-  url.searchParams.set("MobileOS", "ETC");
-  url.searchParams.set("MobileApp", "CampsiteExplorer");
-  url.searchParams.set("_type", "json");
-  if (query) url.searchParams.set("keyword", query);
-
   try {
-    const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
-    if (!res.ok) throw new Error(`GoCamping API error: ${res.status}`);
-    const data: GoCampingResponse = await res.json();
-    const items = data.response.body.items;
-    if (!items) return [];
-    return items.item
-      .filter((i) => i.mapX && i.mapY)
-      .map(normalize);
+    if (!cachedCampsites || Date.now() - cachedAt > CACHE_TTL_MS) {
+      cachedCampsites = await fetchAllFromGoCamping(apiKey);
+      cachedAt = Date.now();
+    }
+    return filterByQuery(cachedCampsites, query);
   } catch (err) {
     console.error("Failed to fetch GoCamping data, falling back to mock:", err);
     return filterByQuery(MOCK_CAMPSITES, query);

@@ -20,7 +20,7 @@ function loadKakaoSdk(): Promise<void> {
 
   sdkLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_KEY}&autoload=false`;
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_KEY}&autoload=false&libraries=clusterer`;
     script.async = true;
     script.onload = () => window.kakao.maps.load(() => resolve());
     script.onerror = () => reject(new Error("Kakao SDK load failed"));
@@ -40,6 +40,7 @@ export default function CampsiteMap({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
+  const clustererRef = useRef<any>(null);
   const markersRef = useRef<Record<string, any>>({});
   const [status, setStatus] = useState<"loading" | "ready" | "no-key" | "error">(
     KAKAO_KEY ? "loading" : "no-key"
@@ -57,6 +58,12 @@ export default function CampsiteMap({
           center,
           level: 13,
         });
+        clustererRef.current = new window.kakao.maps.MarkerClusterer({
+          map: mapRef.current,
+          averageCenter: true,
+          minLevel: 6,
+          disableClickZoom: false,
+        });
         setStatus("ready");
       })
       .catch(() => !cancelled && setStatus("error"));
@@ -67,21 +74,24 @@ export default function CampsiteMap({
   }, []);
 
   useEffect(() => {
-    if (status !== "ready" || !mapRef.current) return;
+    if (status !== "ready" || !mapRef.current || !clustererRef.current) return;
     const kakao = window.kakao;
 
-    Object.values(markersRef.current).forEach((m: any) => m.setMap(null));
+    clustererRef.current.clear();
     markersRef.current = {};
 
-    campsites.forEach((c) => {
-      if (Number.isNaN(c.lat) || Number.isNaN(c.lng)) return;
-      const marker = new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(c.lat, c.lng),
-        map: mapRef.current,
+    const markers = campsites
+      .filter((c) => !Number.isNaN(c.lat) && !Number.isNaN(c.lng))
+      .map((c) => {
+        const marker = new kakao.maps.Marker({
+          position: new kakao.maps.LatLng(c.lat, c.lng),
+        });
+        kakao.maps.event.addListener(marker, "click", () => onSelect?.(c.id));
+        markersRef.current[c.id] = marker;
+        return marker;
       });
-      kakao.maps.event.addListener(marker, "click", () => onSelect?.(c.id));
-      markersRef.current[c.id] = marker;
-    });
+
+    clustererRef.current.addMarkers(markers);
   }, [campsites, status]);
 
   useEffect(() => {

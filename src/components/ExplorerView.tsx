@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Campsite } from "@/lib/types";
 import CampsiteMap from "./CampsiteMap";
+
+const PAGE_SIZE = 30;
 
 export default function ExplorerView({
   initialCampsites,
@@ -14,6 +16,7 @@ export default function ExplorerView({
 }) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | undefined>();
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return initialCampsites;
@@ -25,6 +28,12 @@ export default function ExplorerView({
         c.region.toLowerCase().includes(q)
     );
   }, [initialCampsites, query]);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [query]);
+
+  const displayed = filtered.slice(0, visibleCount);
 
   return (
     <div className="flex h-full flex-col gap-4 p-4 md:p-6">
@@ -61,7 +70,7 @@ export default function ExplorerView({
               검색 결과가 없어요.
             </p>
           )}
-          {filtered.map((c) => (
+          {displayed.map((c) => (
             <CampsiteCard
               key={c.id}
               campsite={c}
@@ -69,6 +78,14 @@ export default function ExplorerView({
               onHover={() => setSelectedId(c.id)}
             />
           ))}
+          {visibleCount < filtered.length && (
+            <button
+              onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+              className="rounded-lg border border-zinc-300 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            >
+              더 보기 ({visibleCount} / {filtered.length})
+            </button>
+          )}
         </div>
         <div className="hidden min-h-[300px] md:block">
           <CampsiteMap
@@ -104,6 +121,7 @@ function CampsiteCard({
       <img
         src={campsite.image}
         alt={campsite.name}
+        loading="lazy"
         className="h-24 w-32 flex-shrink-0 rounded-lg object-cover"
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
