@@ -3,6 +3,8 @@ import { MOCK_CAMPSITES } from "./mock-campsites";
 
 const GOCAMPING_BASE_URL =
   "https://apis.data.go.kr/B551011/GoCamping/basedList";
+const GOCAMPING_IMAGE_URL =
+  "https://apis.data.go.kr/B551011/GoCamping/imageList";
 
 interface GoCampingItem {
   contentId: string;
@@ -142,6 +144,37 @@ export async function getCampsites(query?: string): Promise<Campsite[]> {
 export async function getCampsiteById(id: string): Promise<Campsite | null> {
   const all = await getCampsites();
   return all.find((c) => c.id === id) || null;
+}
+
+interface GoCampingImageItem {
+  imageUrl: string;
+}
+
+export async function getCampsiteImages(contentId: string): Promise<string[]> {
+  const apiKey = process.env.GOCAMPING_API_KEY;
+  if (!apiKey) return [];
+
+  const url = new URL(GOCAMPING_IMAGE_URL);
+  url.searchParams.set("serviceKey", apiKey);
+  url.searchParams.set("contentId", contentId);
+  url.searchParams.set("MobileOS", "ETC");
+  url.searchParams.set("MobileApp", "CampsiteExplorer");
+  url.searchParams.set("_type", "json");
+
+  try {
+    const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const items = data?.response?.body?.items;
+    if (!items) return [];
+    const list: GoCampingImageItem[] = Array.isArray(items.item)
+      ? items.item
+      : [items.item];
+    return list.map((i) => i.imageUrl).filter(Boolean);
+  } catch (err) {
+    console.error("Failed to fetch campsite images:", err);
+    return [];
+  }
 }
 
 function filterByQuery(list: Campsite[], query?: string): Campsite[] {

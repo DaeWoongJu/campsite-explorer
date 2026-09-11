@@ -93,14 +93,18 @@ export default function CampsiteMap({
     const projection = mapRef.current.getProjection();
 
     let nearest: Campsite | null = null;
-    let nearestDist = 32; // px — generous touch target
+    let nearestDist = 42; // px — generous touch target
 
     for (const c of campsitesRef.current) {
       if (Number.isNaN(c.lat) || Number.isNaN(c.lng)) continue;
       const p = projection.containerPointFromCoords(
         new window.kakao.maps.LatLng(c.lat, c.lng)
       );
-      const dist = Math.hypot(p.x - clickPoint.x, p.y - clickPoint.y);
+      // Kakao's default marker icon is anchored at its bottom tip, but a
+      // finger naturally lands on the round upper body of the pin —
+      // bias the comparison point up so that area is favored, not
+      // just the exact geographic anchor pixel.
+      const dist = Math.hypot(p.x - clickPoint.x, p.y - 15 - clickPoint.y);
       if (dist < nearestDist) {
         nearestDist = dist;
         nearest = c;

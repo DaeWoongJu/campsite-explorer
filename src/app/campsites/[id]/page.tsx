@@ -1,16 +1,24 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getCampsiteById } from "@/lib/campsites";
+import { getCampsiteById, getCampsiteImages } from "@/lib/campsites";
 import { getReservationLinks } from "@/lib/links";
 import CampsiteMap from "@/components/CampsiteMap";
+import PhotoGallery from "@/components/PhotoGallery";
+import ReviewSection from "@/components/ReviewSection";
 
 export default async function CampsiteDetailPage(
   props: PageProps<"/campsites/[id]">
 ) {
   const { id } = await props.params;
-  const campsite = await getCampsiteById(id);
+  const [campsite, extraImages] = await Promise.all([
+    getCampsiteById(id),
+    getCampsiteImages(id),
+  ]);
   if (!campsite) notFound();
   const reservations = getReservationLinks(campsite);
+  const images = Array.from(
+    new Set([campsite.image, ...extraImages].filter(Boolean))
+  );
 
   return (
     <div className="h-full overflow-y-auto">
@@ -19,12 +27,7 @@ export default async function CampsiteDetailPage(
           ← 목록으로
         </Link>
 
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={campsite.image}
-          alt={campsite.name}
-          className="h-64 w-full rounded-xl object-cover"
-        />
+        <PhotoGallery images={images} alt={campsite.name} />
 
         <div>
           <div className="flex items-center gap-2">
@@ -80,6 +83,8 @@ export default async function CampsiteDetailPage(
         <div className="h-64 w-full">
           <CampsiteMap campsites={[campsite]} selectedId={campsite.id} />
         </div>
+
+        <ReviewSection campsiteId={campsite.id} />
       </div>
     </div>
   );
