@@ -92,28 +92,24 @@ export default function CampsiteMap({
     const clickPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     const projection = mapRef.current.getProjection();
 
-    // Kakao's default marker icon is ~29x42, anchored at its bottom
-    // tip — but a tap can land anywhere on the visible pin (the round
-    // body near the top as much as the pointed tip at the bottom).
-    // Treat the whole icon as the target: center the hit region on the
-    // icon's vertical midpoint and size it to cover the full icon plus
-    // a touch-friendly margin, using an ellipse so "nearest" is judged
-    // fairly on both axes instead of one fixed circular radius.
-    const HALF_W = 26; // icon half-width + margin
-    const HALF_H = 34; // icon half-height + margin
+    // Trying to bias the hit region toward one end of the icon (its
+    // visual top vs its geographic anchor at the bottom tip) guessed
+    // the wrong direction on some mobile browsers, where the reported
+    // tap coordinate does not line up with the icon the same way it
+    // does on desktop. Instead of guessing a direction, just use a
+    // large symmetric radius centered on the exact anchor point so
+    // small systematic offsets in either direction still land inside it.
     let nearest: Campsite | null = null;
-    let nearestScore = 1; // normalized distance; 1 = edge of the region
+    let nearestDist = 55; // px
 
     for (const c of campsitesRef.current) {
       if (Number.isNaN(c.lat) || Number.isNaN(c.lng)) continue;
       const p = projection.containerPointFromCoords(
         new window.kakao.maps.LatLng(c.lat, c.lng)
       );
-      const dx = (p.x - clickPoint.x) / HALF_W;
-      const dy = (p.y - 21 - clickPoint.y) / HALF_H;
-      const score = dx * dx + dy * dy;
-      if (score < nearestScore) {
-        nearestScore = score;
+      const dist = Math.hypot(p.x - clickPoint.x, p.y - clickPoint.y);
+      if (dist < nearestDist) {
+        nearestDist = dist;
         nearest = c;
       }
     }
