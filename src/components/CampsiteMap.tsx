@@ -98,9 +98,9 @@ export default function CampsiteMap({
     // anchor point, which Kakao places at the icon's bottom tip.
     // Compare against the anchor shifted up by that amount so a
     // natural tap on the icon body — not just its exact tip — matches.
-    const ANCHOR_BIAS_Y = 40;
+    const ANCHOR_BIAS_Y = 25;
     let nearest: Campsite | null = null;
-    let nearestDist = 45; // px, now that the comparison point is centered correctly
+    let nearestDist = 90; // px
     let closestAny: { c: Campsite; p: { x: number; y: number }; d: number } | null =
       null;
 
