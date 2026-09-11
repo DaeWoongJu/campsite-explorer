@@ -61,7 +61,6 @@ export default function CampsiteMap({
   // layer intercepts taps before they reach nested buttons).
   const [popup, setPopup] = useState<Popup | null>(null);
   const lastClickAtRef = useRef(0);
-  const [debugMsg, setDebugMsg] = useState<string>("(아직 탭 없음)");
 
   function showPopup(campsite: Campsite) {
     const projection = mapRef.current.getProjection();
@@ -93,38 +92,29 @@ export default function CampsiteMap({
     const clickPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     const projection = mapRef.current.getProjection();
 
-    // Trying to bias the hit region toward one end of the icon (its
-    // visual top vs its geographic anchor at the bottom tip) guessed
-    // the wrong direction on some mobile browsers, where the reported
-    // tap coordinate does not line up with the icon the same way it
-    // does on desktop. Instead of guessing a direction, just use a
-    // large symmetric radius centered on the exact anchor point so
-    // small systematic offsets in either direction still land inside it.
+    // Measured on a real device: a tap on the visible (round, upper)
+    // part of the pin lands about 40px above the marker's actual
+    // anchor point, which Kakao places at the icon's bottom tip.
+    // Compare against the anchor shifted up by that amount so a
+    // natural tap on the icon body — not just its exact tip — matches.
+    const ANCHOR_BIAS_Y = 40;
     let nearest: Campsite | null = null;
-    let nearestDist = 130; // px
-    let closestAny: { c: Campsite; p: { x: number; y: number }; d: number } | null =
-      null;
+    let nearestDist = 45; // px, now that the comparison point is centered correctly
 
     for (const c of campsitesRef.current) {
       if (Number.isNaN(c.lat) || Number.isNaN(c.lng)) continue;
       const p = projection.containerPointFromCoords(
         new window.kakao.maps.LatLng(c.lat, c.lng)
       );
-      const dist = Math.hypot(p.x - clickPoint.x, p.y - clickPoint.y);
-      if (!closestAny || dist < closestAny.d) closestAny = { c, p, d: dist };
+      const dist = Math.hypot(
+        p.x - clickPoint.x,
+        p.y - ANCHOR_BIAS_Y - clickPoint.y
+      );
       if (dist < nearestDist) {
         nearestDist = dist;
         nearest = c;
       }
     }
-
-    const vv = window.visualViewport;
-    setDebugMsg(
-      `dpr=${window.devicePixelRatio} vvScale=${vv?.scale} vvOff=(${vv?.offsetLeft},${vv?.offsetTop}) ` +
-        `rect=(${Math.round(rect.left)},${Math.round(rect.top)},${Math.round(rect.width)}x${Math.round(rect.height)}) ` +
-        `client=(${Math.round(e.clientX)},${Math.round(e.clientY)}) click=(${Math.round(clickPoint.x)},${Math.round(clickPoint.y)}) ` +
-        `nearest=${closestAny ? `${closestAny.c.name}@(${Math.round(closestAny.p.x)},${Math.round(closestAny.p.y)}) d=${Math.round(closestAny.d)} dx=${Math.round(closestAny.p.x - clickPoint.x)} dy=${Math.round(closestAny.p.y - clickPoint.y)}` : "none"}`
-    );
 
     if (nearest) {
       onSelect?.(nearest.id);
@@ -237,19 +227,6 @@ export default function CampsiteMap({
 
   return (
     <div className="relative h-full w-full">
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 50,
-          whiteSpace: "pre-line",
-        }}
-        className="break-words bg-black/80 p-1 text-[10px] text-white"
-      >
-        {debugMsg}
-      </div>
       <div ref={containerRef} className="h-full w-full rounded-lg" />
       {popup && (
         <div
