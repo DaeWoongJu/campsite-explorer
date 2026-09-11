@@ -92,21 +92,28 @@ export default function CampsiteMap({
     const clickPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     const projection = mapRef.current.getProjection();
 
+    // Kakao's default marker icon is ~29x42, anchored at its bottom
+    // tip — but a tap can land anywhere on the visible pin (the round
+    // body near the top as much as the pointed tip at the bottom).
+    // Treat the whole icon as the target: center the hit region on the
+    // icon's vertical midpoint and size it to cover the full icon plus
+    // a touch-friendly margin, using an ellipse so "nearest" is judged
+    // fairly on both axes instead of one fixed circular radius.
+    const HALF_W = 26; // icon half-width + margin
+    const HALF_H = 34; // icon half-height + margin
     let nearest: Campsite | null = null;
-    let nearestDist = 42; // px — generous touch target
+    let nearestScore = 1; // normalized distance; 1 = edge of the region
 
     for (const c of campsitesRef.current) {
       if (Number.isNaN(c.lat) || Number.isNaN(c.lng)) continue;
       const p = projection.containerPointFromCoords(
         new window.kakao.maps.LatLng(c.lat, c.lng)
       );
-      // Kakao's default marker icon is anchored at its bottom tip, but a
-      // finger naturally lands on the round upper body of the pin —
-      // bias the comparison point up so that area is favored, not
-      // just the exact geographic anchor pixel.
-      const dist = Math.hypot(p.x - clickPoint.x, p.y - 15 - clickPoint.y);
-      if (dist < nearestDist) {
-        nearestDist = dist;
+      const dx = (p.x - clickPoint.x) / HALF_W;
+      const dy = (p.y - 21 - clickPoint.y) / HALF_H;
+      const score = dx * dx + dy * dy;
+      if (score < nearestScore) {
+        nearestScore = score;
         nearest = c;
       }
     }
