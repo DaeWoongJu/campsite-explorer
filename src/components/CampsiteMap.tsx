@@ -102,13 +102,13 @@ export default function CampsiteMap({
         }
       }
 
-      setDebugMsg(
-        `client=(${Math.round(e.clientX)},${Math.round(e.clientY)}) rect=(${Math.round(rect.left)},${Math.round(rect.top)}) click=(${Math.round(clickPoint.x)},${Math.round(clickPoint.y)}) closest=${Math.round(closestSeen)}px n=${campsitesRef.current.length}`
-      );
+      const msg = `[${new Date().toLocaleTimeString()}] click=(${Math.round(clickPoint.x)},${Math.round(clickPoint.y)}) closest=${Math.round(closestSeen)}px matched=${nearest ? "Y" : "N"}`;
+      setDebugMsg((prev) => `${msg}\n${prev}`.slice(0, 400));
 
       if (nearest) {
         onSelect?.(nearest.id);
         showPopup(nearest);
+        setDebugMsg((prev) => `${msg} -> showPopup called\n${prev}`.slice(0, 400));
       } else {
         setPopup(null);
       }
@@ -221,10 +221,19 @@ export default function CampsiteMap({
   return (
     <div className="relative h-full w-full">
       <div
-        style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 50 }}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          whiteSpace: "pre-line",
+        }}
         className="break-words bg-black/80 p-1 text-[10px] text-white"
       >
-        DEBUG: {debugMsg}
+        popup={popup ? popup.campsite.name : "null"}
+        {"\n"}
+        {debugMsg}
       </div>
       <div ref={containerRef} className="h-full w-full rounded-lg" />
       {popup && (
