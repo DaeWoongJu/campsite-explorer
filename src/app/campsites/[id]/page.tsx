@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCampsiteById } from "@/lib/campsites";
-import { getReservationLink } from "@/lib/links";
+import { getReservationLinks } from "@/lib/links";
 import ReviewSection from "@/components/ReviewSection";
 import CampsiteMap from "@/components/CampsiteMap";
 
@@ -11,7 +11,7 @@ export default async function CampsiteDetailPage(
   const { id } = await props.params;
   const campsite = await getCampsiteById(id);
   if (!campsite) notFound();
-  const reservation = getReservationLink(campsite);
+  const reservations = getReservationLinks(campsite);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -63,18 +63,19 @@ export default async function CampsiteDetailPage(
               📞 {campsite.tel}
             </a>
           )}
-          <a
-            href={reservation.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 ${
-              reservation.isFallback ? "bg-zinc-500" : "bg-emerald-600"
-            }`}
-          >
-            {reservation.isFallback
-              ? "네이버에서 찾아보기 ↗"
-              : "예약/홈페이지 바로가기 ↗"}
-          </a>
+          {reservations.map((r) => (
+            <a
+              key={r.url}
+              href={r.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`rounded-lg px-4 py-2 text-sm font-medium text-white hover:opacity-90 ${
+                r.isFallback ? "bg-zinc-500" : "bg-emerald-600"
+              }`}
+            >
+              {r.label}
+            </a>
+          ))}
         </div>
 
         <div className="h-64 w-full">
