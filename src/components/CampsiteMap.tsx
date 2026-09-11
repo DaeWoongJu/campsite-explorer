@@ -61,6 +61,7 @@ export default function CampsiteMap({
   // layer intercepts taps before they reach nested buttons).
   const [popup, setPopup] = useState<Popup | null>(null);
   const lastClickAtRef = useRef(0);
+  const [debugMsg, setDebugMsg] = useState<string>("(아직 탭 없음)");
 
   function showPopup(campsite: Campsite) {
     const projection = mapRef.current.getProjection();
@@ -101,6 +102,8 @@ export default function CampsiteMap({
     // small systematic offsets in either direction still land inside it.
     let nearest: Campsite | null = null;
     let nearestDist = 130; // px
+    let closestAny: { c: Campsite; p: { x: number; y: number }; d: number } | null =
+      null;
 
     for (const c of campsitesRef.current) {
       if (Number.isNaN(c.lat) || Number.isNaN(c.lng)) continue;
@@ -108,11 +111,20 @@ export default function CampsiteMap({
         new window.kakao.maps.LatLng(c.lat, c.lng)
       );
       const dist = Math.hypot(p.x - clickPoint.x, p.y - clickPoint.y);
+      if (!closestAny || dist < closestAny.d) closestAny = { c, p, d: dist };
       if (dist < nearestDist) {
         nearestDist = dist;
         nearest = c;
       }
     }
+
+    const vv = window.visualViewport;
+    setDebugMsg(
+      `dpr=${window.devicePixelRatio} vvScale=${vv?.scale} vvOff=(${vv?.offsetLeft},${vv?.offsetTop}) ` +
+        `rect=(${Math.round(rect.left)},${Math.round(rect.top)},${Math.round(rect.width)}x${Math.round(rect.height)}) ` +
+        `client=(${Math.round(e.clientX)},${Math.round(e.clientY)}) click=(${Math.round(clickPoint.x)},${Math.round(clickPoint.y)}) ` +
+        `nearest=${closestAny ? `${closestAny.c.name}@(${Math.round(closestAny.p.x)},${Math.round(closestAny.p.y)}) d=${Math.round(closestAny.d)} dx=${Math.round(closestAny.p.x - clickPoint.x)} dy=${Math.round(closestAny.p.y - clickPoint.y)}` : "none"}`
+    );
 
     if (nearest) {
       onSelect?.(nearest.id);
@@ -225,6 +237,19 @@ export default function CampsiteMap({
 
   return (
     <div className="relative h-full w-full">
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          whiteSpace: "pre-line",
+        }}
+        className="break-words bg-black/80 p-1 text-[10px] text-white"
+      >
+        {debugMsg}
+      </div>
       <div ref={containerRef} className="h-full w-full rounded-lg" />
       {popup && (
         <div
