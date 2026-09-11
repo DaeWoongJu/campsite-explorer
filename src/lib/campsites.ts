@@ -1,6 +1,7 @@
 import { Campsite } from "./types";
 import { MOCK_CAMPSITES } from "./mock-campsites";
 import { extractCarCampingNote } from "./car-camping";
+import { getCustomCampsites } from "./custom-campsites";
 
 const GOCAMPING_BASE_URL =
   "https://apis.data.go.kr/B551011/GoCamping/basedList";
@@ -129,9 +130,10 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 
 export async function getCampsites(query?: string): Promise<Campsite[]> {
   const apiKey = process.env.GOCAMPING_API_KEY;
+  const custom = await getCustomCampsites();
 
   if (!apiKey) {
-    return filterByQuery(MOCK_CAMPSITES, query);
+    return filterByQuery([...custom, ...MOCK_CAMPSITES], query);
   }
 
   try {
@@ -139,10 +141,10 @@ export async function getCampsites(query?: string): Promise<Campsite[]> {
       cachedCampsites = await fetchAllFromGoCamping(apiKey);
       cachedAt = Date.now();
     }
-    return filterByQuery(cachedCampsites, query);
+    return filterByQuery([...custom, ...cachedCampsites], query);
   } catch (err) {
     console.error("Failed to fetch GoCamping data, falling back to mock:", err);
-    return filterByQuery(MOCK_CAMPSITES, query);
+    return filterByQuery([...custom, ...MOCK_CAMPSITES], query);
   }
 }
 

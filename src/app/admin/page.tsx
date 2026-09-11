@@ -2,8 +2,11 @@ import { cookies } from "next/headers";
 import { isValidSession, ADMIN_COOKIE } from "@/lib/admin-auth";
 import { getStats } from "@/lib/stats";
 import { getCampsiteById } from "@/lib/campsites";
+import { getCustomCampsites } from "@/lib/custom-campsites";
 import AdminLoginForm from "@/components/AdminLoginForm";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
+import AdminAddCampsiteForm from "@/components/AdminAddCampsiteForm";
+import AdminCustomCampsiteDeleteButton from "@/components/AdminCustomCampsiteDeleteButton";
 
 export const metadata = {
   robots: { index: false, follow: false },
@@ -22,6 +25,7 @@ export default async function AdminPage() {
   }
 
   const stats = await getStats();
+  const customCampsites = await getCustomCampsites();
   const topCampsites = await Promise.all(
     stats.topCampsites.map(async (c) => ({
       ...c,
@@ -80,6 +84,34 @@ export default async function AdminPage() {
                 </li>
               ))}
             </ol>
+          )}
+        </div>
+
+        <AdminAddCampsiteForm />
+
+        <div>
+          <h2 className="mb-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+            직접 추가한 캠핑장 ({customCampsites.length})
+          </h2>
+          {customCampsites.length === 0 ? (
+            <p className="text-sm text-zinc-400">아직 없어요.</p>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {customCampsites.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
+                >
+                  <div className="min-w-0 truncate">
+                    <span className="font-medium">{c.name}</span>
+                    <span className="ml-2 text-xs text-zinc-400">
+                      {c.address}
+                    </span>
+                  </div>
+                  <AdminCustomCampsiteDeleteButton id={c.id} />
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </div>
