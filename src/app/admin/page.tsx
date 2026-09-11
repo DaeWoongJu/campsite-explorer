@@ -23,7 +23,9 @@ export default async function AdminPage() {
 
   const stats = await getStats();
   const debugAll = await getCampsites();
-  const debugInfo = `live=${hasLiveApi()} count=${debugAll.length} has101058=${debugAll.some((c) => c.id === "101058")}`;
+  const debugInfo = `live=${hasLiveApi()} count=${debugAll.length} has101058=${debugAll.some((c) => c.id === "101058")} topIds=${JSON.stringify(
+    stats.topCampsites.map((c) => ({ raw: c.id, len: c.id.length }))
+  )}`;
   const topCampsites = await Promise.all(
     stats.topCampsites.map(async (c) => ({
       ...c,
