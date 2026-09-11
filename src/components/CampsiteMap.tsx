@@ -81,7 +81,7 @@ export default function CampsiteMap({
       content: el,
       position: marker.getPosition(),
       yAnchor: 1.3,
-      zIndex: 10,
+      zIndex: 9999,
     });
     overlay.setMap(mapRef.current);
     overlayRef.current = overlay;
