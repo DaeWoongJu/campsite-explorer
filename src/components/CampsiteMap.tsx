@@ -61,6 +61,7 @@ export default function CampsiteMap({
   // layer intercepts taps before they reach nested buttons).
   const [popup, setPopup] = useState<Popup | null>(null);
   const lastClickAtRef = useRef(0);
+  const [debugMsg, setDebugMsg] = useState<string>("(아직 탭 없음)");
 
   function showPopup(campsite: Campsite) {
     const projection = mapRef.current.getProjection();
@@ -100,6 +101,8 @@ export default function CampsiteMap({
     const ANCHOR_BIAS_Y = 40;
     let nearest: Campsite | null = null;
     let nearestDist = 45; // px, now that the comparison point is centered correctly
+    let closestAny: { c: Campsite; p: { x: number; y: number }; d: number } | null =
+      null;
 
     for (const c of campsitesRef.current) {
       if (Number.isNaN(c.lat) || Number.isNaN(c.lng)) continue;
@@ -110,11 +113,17 @@ export default function CampsiteMap({
         p.x - clickPoint.x,
         p.y - ANCHOR_BIAS_Y - clickPoint.y
       );
+      if (!closestAny || dist < closestAny.d) closestAny = { c, p, d: dist };
       if (dist < nearestDist) {
         nearestDist = dist;
         nearest = c;
       }
     }
+
+    setDebugMsg(
+      `click=(${Math.round(clickPoint.x)},${Math.round(clickPoint.y)}) matched=${nearest ? "Y" : "N"} ` +
+        `closest=${closestAny ? `${closestAny.c.name}@rawAnchor(${Math.round(closestAny.p.x)},${Math.round(closestAny.p.y - ANCHOR_BIAS_Y)}) afterBias_d=${Math.round(closestAny.d)} rawDx=${Math.round(closestAny.p.x - clickPoint.x)} rawDy=${Math.round(closestAny.p.y - clickPoint.y)}` : "none"}`
+    );
 
     if (nearest) {
       onSelect?.(nearest.id);
@@ -227,6 +236,19 @@ export default function CampsiteMap({
 
   return (
     <div className="relative h-full w-full">
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          whiteSpace: "pre-line",
+        }}
+        className="break-words bg-black/80 p-1 text-[10px] text-white"
+      >
+        {debugMsg}
+      </div>
       <div ref={containerRef} className="h-full w-full rounded-lg" />
       {popup && (
         <div
