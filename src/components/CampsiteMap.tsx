@@ -100,7 +100,7 @@ export default function CampsiteMap({
     // large symmetric radius centered on the exact anchor point so
     // small systematic offsets in either direction still land inside it.
     let nearest: Campsite | null = null;
-    let nearestDist = 80; // px
+    let nearestDist = 130; // px
 
     for (const c of campsitesRef.current) {
       if (Number.isNaN(c.lat) || Number.isNaN(c.lng)) continue;

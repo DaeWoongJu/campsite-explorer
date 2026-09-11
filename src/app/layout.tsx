@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "전국 캠핑장 탐색",
+  title: "Made By Ju Camp Search",
   description: "전국 캠핑장을 지도에서 찾아보고, 리뷰를 확인하고, 예약 사이트로 이동하세요.",
 };
 

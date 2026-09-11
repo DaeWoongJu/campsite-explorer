@@ -42,7 +42,7 @@ export default function ExplorerView({
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-            전국 캠핑장 탐색
+            Made By Ju Camp Search
           </h1>
           <p className="text-sm text-zinc-500">
             {filtered.length}개의 캠핑장 ·{" "}
