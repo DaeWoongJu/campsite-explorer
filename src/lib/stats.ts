@@ -46,9 +46,12 @@ export async function getStats(): Promise<Stats> {
     }),
   ]);
 
+  // Upstash's REST gateway returns numeric-looking sorted-set members
+  // (e.g. GoCamping content IDs) as JSON numbers, not strings, even
+  // though Redis members are always strings — coerce them back.
   const topCampsites: { id: string; count: number }[] = [];
   for (let i = 0; i < top.length; i += 2) {
-    topCampsites.push({ id: top[i], count: Number(top[i + 1]) });
+    topCampsites.push({ id: String(top[i]), count: Number(top[i + 1]) });
   }
 
   return {

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { isValidSession, ADMIN_COOKIE } from "@/lib/admin-auth";
 import { getStats } from "@/lib/stats";
-import { getCampsiteById, getCampsites, hasLiveApi } from "@/lib/campsites";
+import { getCampsiteById } from "@/lib/campsites";
 import AdminLoginForm from "@/components/AdminLoginForm";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
 
@@ -22,10 +22,6 @@ export default async function AdminPage() {
   }
 
   const stats = await getStats();
-  const debugAll = await getCampsites();
-  const debugInfo = `live=${hasLiveApi()} count=${debugAll.length} has101058=${debugAll.some((c) => c.id === "101058")} topIds=${JSON.stringify(
-    stats.topCampsites.map((c) => ({ raw: c.id, len: c.id.length }))
-  )}`;
   const topCampsites = await Promise.all(
     stats.topCampsites.map(async (c) => ({
       ...c,
@@ -42,8 +38,6 @@ export default async function AdminPage() {
           </h1>
           <AdminLogoutButton />
         </div>
-
-        <p className="text-xs text-zinc-400">DEBUG: {debugInfo}</p>
 
         {!stats.connected && (
           <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-400">
