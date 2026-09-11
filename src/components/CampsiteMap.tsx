@@ -61,7 +61,7 @@ export default function CampsiteMap({
 
   function showPopup(campsite: Campsite, marker: any) {
     const projection = mapRef.current.getProjection();
-    const point = projection.pointFromCoords(marker.getPosition());
+    const point = projection.containerPointFromCoords(marker.getPosition());
     setPopup({ campsite, x: point.x, y: point.y });
   }
 
