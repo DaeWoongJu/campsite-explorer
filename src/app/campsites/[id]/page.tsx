@@ -20,6 +20,7 @@ export default async function CampsiteDetailPage(
   if (!campsite) notFound();
   const isAdmin = isValidSession(cookieStore.get(ADMIN_COOKIE)?.value);
   const reservations = getReservationLinks(campsite);
+  const carCampingNote = campsite.carCampingNote;
   const images = Array.from(
     new Set([campsite.image, ...extraImages].filter(Boolean))
   );
@@ -46,6 +47,20 @@ export default async function CampsiteDetailPage(
         </div>
 
         <p className="text-zinc-700 dark:text-zinc-300">{campsite.intro}</p>
+
+        {carCampingNote ? (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+            <span className="font-semibold">🚗 차박 관련 안내 (캠핑장 소개글 발췌)</span>
+            <p className="mt-1">&ldquo;{carCampingNote}&rdquo;</p>
+            <p className="mt-1 text-xs text-amber-700 dark:text-amber-500">
+              공식 확인된 정보가 아니라 캠핑장이 직접 쓴 소개글 문장이에요. 예약/문의 시 다시 확인해주세요.
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-400">
+            🚗 차박 가능 여부는 이 캠핑장 소개글에 나와있지 않아요. 예약 전 캠핑장에 직접 문의해주세요.
+          </p>
+        )}
 
         {campsite.facilities.length > 0 && (
           <div className="flex flex-wrap gap-2">

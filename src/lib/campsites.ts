@@ -1,5 +1,6 @@
 import { Campsite } from "./types";
 import { MOCK_CAMPSITES } from "./mock-campsites";
+import { extractCarCampingNote } from "./car-camping";
 
 const GOCAMPING_BASE_URL =
   "https://apis.data.go.kr/B551011/GoCamping/basedList";
@@ -53,6 +54,10 @@ function normalize(item: GoCampingItem): Campsite {
     homepage: extractFirstUrl(item.homepage) || undefined,
     type: item.induty || undefined,
     region: [item.doNm, item.sigunguNm].filter(Boolean).join(" "),
+    carCampingNote:
+      extractCarCampingNote(
+        stripHtml(`${item.intro || ""} ${item.lineIntro || ""}`)
+      ) || undefined,
   };
 }
 

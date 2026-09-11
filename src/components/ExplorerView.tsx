@@ -166,11 +166,18 @@ function CampsiteCard({
           <span className="truncate font-semibold text-zinc-900 dark:text-zinc-50">
             {campsite.name}
           </span>
-          {campsite.type && (
-            <span className="flex-shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800">
-              {campsite.type}
-            </span>
-          )}
+          <div className="flex flex-shrink-0 gap-1">
+            {campsite.carCampingNote && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                🚗 차박 언급
+              </span>
+            )}
+            {campsite.type && (
+              <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800">
+                {campsite.type}
+              </span>
+            )}
+          </div>
         </div>
         <p className="truncate text-xs text-zinc-500">{campsite.address}</p>
         <p className="line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">

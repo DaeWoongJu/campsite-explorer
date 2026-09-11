@@ -11,4 +11,5 @@ export interface Campsite {
   homepage?: string;
   type?: string;
   region: string;
+  carCampingNote?: string;
 }
