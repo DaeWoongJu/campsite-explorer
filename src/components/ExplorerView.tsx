@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Campsite } from "@/lib/types";
+import { getReservationLink } from "@/lib/links";
 import CampsiteMap from "./CampsiteMap";
 
 const PAGE_SIZE = 30;
@@ -109,6 +110,7 @@ function CampsiteCard({
   onHover: () => void;
 }) {
   const router = useRouter();
+  const reservation = getReservationLink(campsite);
 
   return (
     <div
@@ -146,17 +148,19 @@ function CampsiteCard({
           <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
             자세히 보기
           </span>
-          {campsite.homepage && (
-            <a
-              href={campsite.homepage}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="text-xs font-medium text-zinc-500 hover:underline"
-            >
-              예약/홈페이지 ↗
-            </a>
-          )}
+          <a
+            href={reservation.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className={`text-xs font-medium hover:underline ${
+              reservation.isFallback
+                ? "text-zinc-400"
+                : "text-zinc-500"
+            }`}
+          >
+            {reservation.label}
+          </a>
         </div>
       </div>
     </div>
