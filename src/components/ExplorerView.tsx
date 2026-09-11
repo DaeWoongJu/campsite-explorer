@@ -18,6 +18,7 @@ export default function ExplorerView({
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [mobileTab, setMobileTab] = useState<"list" | "map">("list");
 
   const filtered = useMemo(() => {
     if (!query.trim()) return initialCampsites;
@@ -64,8 +65,35 @@ export default function ExplorerView({
         />
       </header>
 
+      <div className="flex gap-2 md:hidden">
+        <button
+          onClick={() => setMobileTab("list")}
+          className={`flex-1 rounded-lg py-2 text-sm font-medium ${
+            mobileTab === "list"
+              ? "bg-emerald-600 text-white"
+              : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+          }`}
+        >
+          목록
+        </button>
+        <button
+          onClick={() => setMobileTab("map")}
+          className={`flex-1 rounded-lg py-2 text-sm font-medium ${
+            mobileTab === "map"
+              ? "bg-emerald-600 text-white"
+              : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+          }`}
+        >
+          지도
+        </button>
+      </div>
+
       <div className="grid flex-1 gap-4 overflow-hidden md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="flex flex-col gap-3 overflow-y-auto pr-1">
+        <div
+          className={`${
+            mobileTab === "list" ? "flex" : "hidden"
+          } flex-col gap-3 overflow-y-auto pr-1 md:flex`}
+        >
           {filtered.length === 0 && (
             <p className="py-10 text-center text-sm text-zinc-400">
               검색 결과가 없어요.
@@ -88,7 +116,11 @@ export default function ExplorerView({
             </button>
           )}
         </div>
-        <div className="hidden min-h-[300px] md:block">
+        <div
+          className={`${
+            mobileTab === "map" ? "block" : "hidden"
+          } min-h-[300px] md:block`}
+        >
           <CampsiteMap
             campsites={filtered}
             selectedId={selectedId}

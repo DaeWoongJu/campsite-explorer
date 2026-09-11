@@ -118,6 +118,22 @@ export default function CampsiteMap({
   }, []);
 
   useEffect(() => {
+    if (status !== "ready" || !mapRef.current || !containerRef.current) return;
+    const map = mapRef.current;
+
+    // The container can be 0x0 while hidden behind the mobile list/map
+    // tab. Kakao's map sizes itself once at construction time, so it
+    // needs an explicit relayout whenever the visible size changes.
+    const observer = new ResizeObserver(() => {
+      const center = map.getCenter();
+      map.relayout();
+      map.setCenter(center);
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [status]);
+
+  useEffect(() => {
     if (status !== "ready" || !mapRef.current || !clustererRef.current) return;
     const kakao = window.kakao;
 

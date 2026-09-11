@@ -12,12 +12,3 @@ export interface Campsite {
   type?: string;
   region: string;
 }
-
-export interface Review {
-  id: string;
-  campsiteId: string;
-  author: string;
-  rating: number;
-  content: string;
-  createdAt: string;
-}

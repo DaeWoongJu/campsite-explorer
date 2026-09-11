@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCampsiteById } from "@/lib/campsites";
 import { getReservationLinks } from "@/lib/links";
-import ReviewSection from "@/components/ReviewSection";
 import CampsiteMap from "@/components/CampsiteMap";
 
 export default async function CampsiteDetailPage(
@@ -81,8 +80,6 @@ export default async function CampsiteDetailPage(
         <div className="h-64 w-full">
           <CampsiteMap campsites={[campsite]} selectedId={campsite.id} />
         </div>
-
-        <ReviewSection campsiteId={campsite.id} />
       </div>
     </div>
   );

@@ -1,10 +1,8 @@
 # 전국 캠핑장 탐색
 
-전국 캠핑장을 목록/지도에서 찾아보고, 사진과 시설 정보를 확인하고, 리뷰를 남기고, 예약 사이트로 바로 이동할 수 있는 웹앱입니다.
+전국 캠핑장을 목록/지도에서 찾아보고, 사진과 시설 정보를 확인하고, 예약 사이트로 바로 이동할 수 있는 웹앱입니다.
 
-## 지금 상태
-
-API 키를 아직 설정하지 않아서 **샘플(목업) 데이터 8곳**으로 동작합니다. 화면 상단에 "샘플 데이터"라고 표시되면 아직 실제 데이터가 아니라는 뜻이에요. 아래 키를 설정하면 자동으로 실제 데이터로 전환됩니다.
+배포 주소: https://jucamp.vercel.app
 
 ## 실행 방법
 
@@ -27,12 +25,15 @@ npm run dev
 GOCAMPING_API_KEY=발급받은키
 ```
 
+키가 없으면 샘플(목업) 데이터 8곳으로 동작합니다.
+
 ### 2. 카카오맵 API 키 (지도 표시)
 
 1. https://developers.kakao.com 접속 후 로그인
-2. 애플리케이션 추가 → JavaScript 키 복사
-3. 플랫폼 설정에서 Web 플랫폼에 `http://localhost:3000` 등록
-4. `.env.local`에 추가
+2. 애플리케이션 추가 → 플랫폼 키에서 JavaScript 키 복사
+3. JS SDK 도메인에 `http://localhost:3000`(및 배포 도메인) 등록
+4. 제품 설정 > 카카오맵에서 사용 설정을 켜기
+5. `.env.local`에 추가
 
 ```
 NEXT_PUBLIC_KAKAO_MAP_KEY=발급받은키
@@ -42,11 +43,10 @@ NEXT_PUBLIC_KAKAO_MAP_KEY=발급받은키
 
 ## 주요 기능
 
-- 목록/검색: 캠핑장 이름, 주소, 지역으로 검색 (`src/components/ExplorerView.tsx`)
-- 지도: 카카오맵에 캠핑장 위치 마커 표시, 목록과 연동 (`src/components/CampsiteMap.tsx`)
+- 목록/검색: 캠핑장 이름, 주소, 지역으로 검색, 모바일에서는 목록/지도 탭으로 전환 (`src/components/ExplorerView.tsx`)
+- 지도: 카카오맵에 캠핑장 위치를 클러스터 마커로 표시, 마커 클릭 시 미리보기 팝업 → 상세 페이지 이동 (`src/components/CampsiteMap.tsx`)
 - 상세 페이지: 사진, 소개, 시설, 전화/예약 링크 (`src/app/campsites/[id]/page.tsx`)
-- 리뷰: 이 사이트에 직접 별점/후기를 남기는 자체 리뷰 기능. `data/reviews.json`에 저장됩니다 (`src/lib/reviews.ts`)
-- 예약 연결: 고캠핑 데이터의 홈페이지 링크로 바로 연결 (별도 예약 시스템은 없고, 각 캠핑장 홈페이지/예약 페이지로 이동합니다)
+- 예약 연결: 홈페이지가 있으면 바로 연결, 없거나 SNS 링크뿐이면 네이버 지도 검색으로 대체 연결 (`src/lib/links.ts`)
 
 ## 폴더 구조
 
@@ -56,21 +56,17 @@ src/
     page.tsx                 메인 목록+지도 페이지
     campsites/[id]/page.tsx  캠핑장 상세 페이지
     api/campsites/route.ts   캠핑장 목록 API
-    api/reviews/[id]/route.ts 리뷰 조회/등록 API
   components/
     ExplorerView.tsx  검색+목록+지도 레이아웃
     CampsiteMap.tsx   카카오맵 컴포넌트
-    ReviewSection.tsx 리뷰 목록/작성 폼
   lib/
-    campsites.ts       고캠핑 API 연동 + 목업 폴백
+    campsites.ts    고캠핑 API 연동(전체 페이지네이션) + 목업 폴백
     mock-campsites.ts  샘플 데이터
-    reviews.ts          리뷰 파일 저장소
-    types.ts             타입 정의
-data/reviews.json  리뷰 저장 파일 (자동 생성, git에는 올라가지 않음)
+    links.ts        예약/홈페이지 링크 판별 로직
+    types.ts        타입 정의
 ```
 
 ## 알아두면 좋은 점
 
-- 리뷰는 로컬 JSON 파일에 저장되는 간단한 방식입니다. 나중에 여러 사람이 같이 쓰는 서비스로 키우려면 실제 데이터베이스(Supabase, PlanetScale 등)로 옮기는 게 좋아요.
-- 고캠핑 API에는 "리뷰"가 없어서, 리뷰는 이 사이트 자체 기능으로 만들었습니다.
-- 예약은 각 캠핑장이 자체 운영하는 시스템(홈페이지, 네이버 예약, 캠핑톡 등)을 쓰기 때문에, 이 사이트에서는 "예약 사이트로 이동" 링크만 제공합니다.
+- 고캠핑 API는 페이지당 최대 500개씩 전체를 가져와 서버에서 1시간 캐시합니다.
+- Vercel은 요청마다 파일 시스템이 초기화되므로, 방문자 수 집계 같은 상태를 저장하는 기능을 추가하려면 로컬 파일이 아니라 실제 데이터베이스(Vercel KV/Upstash 등)가 필요합니다.
