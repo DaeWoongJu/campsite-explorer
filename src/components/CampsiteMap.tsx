@@ -231,11 +231,27 @@ export default function CampsiteMap({
         }}
         className="break-words bg-black/80 p-1 text-[10px] text-white"
       >
-        popup={popup ? popup.campsite.name : "null"}
+        popup={popup ? `${popup.campsite.name} @ (${Math.round(popup.x)},${Math.round(popup.y)})` : "null"}
         {"\n"}
         {debugMsg}
       </div>
       <div ref={containerRef} className="h-full w-full rounded-lg" />
+      {popup && (
+        <div
+          style={{
+            position: "fixed",
+            top: 8,
+            right: 8,
+            zIndex: 999,
+            background: "red",
+            color: "white",
+            padding: "4px 8px",
+            fontSize: 10,
+          }}
+        >
+          POPUP STATE IS ON
+        </div>
+      )}
       {popup && (
         <div
           style={{
