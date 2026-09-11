@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useEffect, useRef, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { loadKakaoSdk } from "@/lib/kakao-sdk";
 
@@ -42,6 +42,26 @@ export default function AdminAddCampsiteForm() {
   );
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showPostcode, setShowPostcode] = useState(false);
+  const postcodeContainerRef = useRef<HTMLDivElement>(null);
+
+  // Daum Postcode's own .open() relies on window.open, which many
+  // browsers (and some in-app webviews) block outright regardless of
+  // user gesture. Embedding it directly in a modal we control avoids
+  // popups entirely and works everywhere.
+  useEffect(() => {
+    if (!showPostcode || !postcodeContainerRef.current) return;
+    new window.daum.Postcode({
+      oncomplete: (data: any) => {
+        const picked = data.roadAddress || data.jibunAddress || data.address;
+        setAddress(picked);
+        setShowPostcode(false);
+        geocode(picked);
+      },
+      width: "100%",
+      height: "100%",
+    }).embed(postcodeContainerRef.current);
+  }, [showPostcode]);
 
   async function geocode(addr: string) {
     setStatus("geocoding");
@@ -70,13 +90,7 @@ export default function AdminAddCampsiteForm() {
     setError(null);
     try {
       await loadDaumPostcode();
-      new window.daum.Postcode({
-        oncomplete: (data: any) => {
-          const picked = data.roadAddress || data.jibunAddress || data.address;
-          setAddress(picked);
-          geocode(picked);
-        },
-      }).open();
+      setShowPostcode(true);
     } catch {
       setError("주소 검색 창을 불러오지 못했어요.");
     }
@@ -213,6 +227,30 @@ export default function AdminAddCampsiteForm() {
       >
         {status === "submitting" ? "추가 중..." : "캠핑장 추가"}
       </button>
+
+      {showPostcode && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1000,
+            background: "rgba(0,0,0,.5)",
+          }}
+          className="flex items-center justify-center p-4"
+        >
+          <div className="relative h-[500px] w-full max-w-md rounded-xl bg-white p-2">
+            <button
+              type="button"
+              onClick={() => setShowPostcode(false)}
+              className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-white shadow"
+              aria-label="닫기"
+            >
+              ✕
+            </button>
+            <div ref={postcodeContainerRef} className="h-full w-full" />
+          </div>
+        </div>
+      )}
     </form>
   );
 }
