@@ -81,6 +81,12 @@ export default function CampsiteMap({
     if (now - lastClickAtRef.current < 400) return;
     lastClickAtRef.current = now;
 
+    // MarkerClusterer's cluster bubbles are plain DOM elements whose
+    // text is just the count (e.g. "12"). Let Kakao's own click-to-zoom
+    // handle those; only resolve individual-marker taps ourselves.
+    const targetText = (e.target as HTMLElement | null)?.textContent?.trim();
+    if (targetText && /^\d+$/.test(targetText)) return;
+
     if (!containerRef.current || !mapRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const clickPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
