@@ -35,20 +35,22 @@ function naverSearchLink(campsite: Campsite): ReservationLink {
   };
 }
 
-/** Returns 1-2 links: the source homepage (if any) plus a search
- *  fallback when there's no homepage, or when the homepage is just a
- *  social profile rather than a real booking/info site. */
+/** Returns the source homepage (if any) plus a Naver Map search
+ *  fallback. The fallback is always included alongside a real
+ *  homepage too — GoCamping's own homepage URLs are often stale
+ *  (dead domains) and we cannot pre-check 3000+ links, so users
+ *  always have a working backup path. */
 export function getReservationLinks(campsite: Campsite): ReservationLink[] {
   if (!campsite.homepage) {
     return [naverSearchLink(campsite)];
   }
 
-  const { label, isSocial } = classifyHomepage(campsite.homepage);
+  const { label } = classifyHomepage(campsite.homepage);
   const primary: ReservationLink = {
     url: campsite.homepage,
     label,
     isFallback: false,
   };
 
-  return isSocial ? [primary, naverSearchLink(campsite)] : [primary];
+  return [primary, naverSearchLink(campsite)];
 }
