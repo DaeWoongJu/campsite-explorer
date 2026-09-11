@@ -50,6 +50,8 @@ export default function CampsiteMap({
   const mapRef = useRef<any>(null);
   const clustererRef = useRef<any>(null);
   const markersRef = useRef<Record<string, any>>({});
+  const campsitesRef = useRef<Campsite[]>(campsites);
+  campsitesRef.current = campsites;
   const [status, setStatus] = useState<"loading" | "ready" | "no-key" | "error">(
     KAKAO_KEY ? "loading" : "no-key"
   );
@@ -59,10 +61,44 @@ export default function CampsiteMap({
   // layer intercepts taps before they reach nested buttons).
   const [popup, setPopup] = useState<Popup | null>(null);
 
-  function showPopup(campsite: Campsite, marker: any) {
+  function showPopup(campsite: Campsite) {
     const projection = mapRef.current.getProjection();
-    const point = projection.containerPointFromCoords(marker.getPosition());
+    const point = projection.containerPointFromCoords(
+      new window.kakao.maps.LatLng(campsite.lat, campsite.lng)
+    );
     setPopup({ campsite, x: point.x, y: point.y });
+  }
+
+  // Kakao's per-marker "click" event turned out not to reliably fire
+  // from real touch taps once markers are managed by MarkerClusterer
+  // (cluster-bubble taps worked fine; individual marker taps did not,
+  // even on a single isolated marker). Instead, resolve taps on the
+  // map itself to whichever campsite is nearest the tapped point.
+  function handleMapClick(mouseEvent: any) {
+    const projection = mapRef.current.getProjection();
+    const clickPoint = projection.containerPointFromCoords(mouseEvent.latLng);
+
+    let nearest: Campsite | null = null;
+    let nearestDist = 32; // px — generous touch target
+
+    for (const c of campsitesRef.current) {
+      if (Number.isNaN(c.lat) || Number.isNaN(c.lng)) continue;
+      const p = projection.containerPointFromCoords(
+        new window.kakao.maps.LatLng(c.lat, c.lng)
+      );
+      const dist = Math.hypot(p.x - clickPoint.x, p.y - clickPoint.y);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = c;
+      }
+    }
+
+    if (nearest) {
+      onSelect?.(nearest.id);
+      showPopup(nearest);
+    } else {
+      setPopup(null);
+    }
   }
 
   useEffect(() => {
@@ -83,8 +119,10 @@ export default function CampsiteMap({
           minLevel: 6,
           disableClickZoom: false,
         });
-        window.kakao.maps.event.addListener(mapRef.current, "click", () =>
-          setPopup(null)
+        window.kakao.maps.event.addListener(
+          mapRef.current,
+          "click",
+          handleMapClick
         );
         window.kakao.maps.event.addListener(mapRef.current, "dragstart", () =>
           setPopup(null)
@@ -130,10 +168,6 @@ export default function CampsiteMap({
       .map((c) => {
         const marker = new kakao.maps.Marker({
           position: new kakao.maps.LatLng(c.lat, c.lng),
-        });
-        kakao.maps.event.addListener(marker, "click", () => {
-          onSelect?.(c.id);
-          showPopup(c, marker);
         });
         markersRef.current[c.id] = marker;
         return marker;
