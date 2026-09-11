@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { isValidSession, ADMIN_COOKIE } from "@/lib/admin-auth";
 import { getStats } from "@/lib/stats";
-import { getCampsites } from "@/lib/campsites";
+import { getCampsiteById } from "@/lib/campsites";
 import AdminLoginForm from "@/components/AdminLoginForm";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
 
@@ -22,9 +22,12 @@ export default async function AdminPage() {
   }
 
   const stats = await getStats();
-  const campsites = await getCampsites();
-  const nameOf = (id: string) =>
-    campsites.find((c) => c.id === id)?.name ?? `(삭제됨/${id})`;
+  const topCampsites = await Promise.all(
+    stats.topCampsites.map(async (c) => ({
+      ...c,
+      name: (await getCampsiteById(c.id))?.name ?? `(삭제됨/${c.id})`,
+    }))
+  );
 
   return (
     <div className="h-full overflow-y-auto">
@@ -58,18 +61,18 @@ export default async function AdminPage() {
           <h2 className="mb-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
             많이 클릭한 캠핑장 TOP 20
           </h2>
-          {stats.topCampsites.length === 0 ? (
+          {topCampsites.length === 0 ? (
             <p className="text-sm text-zinc-400">아직 데이터가 없어요.</p>
           ) : (
             <ol className="flex flex-col gap-1">
-              {stats.topCampsites.map((c, i) => (
+              {topCampsites.map((c, i) => (
                 <li
                   key={c.id}
                   className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
                 >
                   <span className="truncate">
                     <span className="mr-2 text-zinc-400">{i + 1}</span>
-                    {nameOf(c.id)}
+                    {c.name}
                   </span>
                   <span className="flex-shrink-0 font-semibold text-emerald-600 dark:text-emerald-400">
                     {c.count}회
