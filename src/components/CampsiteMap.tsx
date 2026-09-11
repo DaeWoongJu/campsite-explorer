@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Campsite } from "@/lib/types";
 
 declare global {
@@ -38,13 +39,53 @@ export default function CampsiteMap({
   selectedId?: string;
   onSelect?: (id: string) => void;
 }) {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const clustererRef = useRef<any>(null);
   const markersRef = useRef<Record<string, any>>({});
+  const overlayRef = useRef<any>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "no-key" | "error">(
     KAKAO_KEY ? "loading" : "no-key"
   );
+
+  function closeOverlay() {
+    overlayRef.current?.setMap(null);
+    overlayRef.current = null;
+  }
+
+  function openOverlay(campsite: Campsite, marker: any) {
+    const kakao = window.kakao;
+    closeOverlay();
+
+    const el = document.createElement("div");
+    el.style.cssText =
+      "background:white;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.2);padding:10px;width:200px;font-family:inherit;position:relative;";
+    el.innerHTML = `
+      <button aria-label="닫기" style="position:absolute;top:4px;right:6px;border:none;background:none;font-size:14px;cursor:pointer;color:#888;">✕</button>
+      <img src="${campsite.image}" alt="" style="width:100%;height:90px;object-fit:cover;border-radius:6px;margin-bottom:6px;" />
+      <div style="font-size:13px;font-weight:600;color:#111;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${campsite.name}</div>
+      <button style="width:100%;background:#059669;color:white;border:none;border-radius:6px;padding:6px 0;font-size:12px;font-weight:600;cursor:pointer;">캠핑장 보기</button>
+    `;
+    const [closeBtn, viewBtn] = el.querySelectorAll("button");
+    closeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeOverlay();
+    });
+    viewBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      router.push(`/campsites/${campsite.id}`);
+    });
+
+    const overlay = new kakao.maps.CustomOverlay({
+      content: el,
+      position: marker.getPosition(),
+      yAnchor: 1.3,
+      zIndex: 10,
+    });
+    overlay.setMap(mapRef.current);
+    overlayRef.current = overlay;
+  }
 
   useEffect(() => {
     if (!KAKAO_KEY || !containerRef.current) return;
@@ -64,6 +105,9 @@ export default function CampsiteMap({
           minLevel: 6,
           disableClickZoom: false,
         });
+        window.kakao.maps.event.addListener(mapRef.current, "click", () =>
+          closeOverlay()
+        );
         setStatus("ready");
       })
       .catch(() => !cancelled && setStatus("error"));
@@ -79,6 +123,7 @@ export default function CampsiteMap({
 
     clustererRef.current.clear();
     markersRef.current = {};
+    closeOverlay();
 
     const markers = campsites
       .filter((c) => !Number.isNaN(c.lat) && !Number.isNaN(c.lng))
@@ -86,7 +131,10 @@ export default function CampsiteMap({
         const marker = new kakao.maps.Marker({
           position: new kakao.maps.LatLng(c.lat, c.lng),
         });
-        kakao.maps.event.addListener(marker, "click", () => onSelect?.(c.id));
+        kakao.maps.event.addListener(marker, "click", () => {
+          onSelect?.(c.id);
+          openOverlay(c, marker);
+        });
         markersRef.current[c.id] = marker;
         return marker;
       });

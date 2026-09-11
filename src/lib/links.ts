@@ -27,10 +27,10 @@ function classifyHomepage(url: string): { label: string; isSocial: boolean } {
 }
 
 function naverSearchLink(campsite: Campsite): ReservationLink {
-  const query = encodeURIComponent(`${campsite.name} 예약`);
+  const query = encodeURIComponent(campsite.name);
   return {
-    url: `https://search.naver.com/search.naver?query=${query}`,
-    label: "네이버에서 찾아보기 ↗",
+    url: `https://map.naver.com/p/search/${query}`,
+    label: "네이버 지도에서 예약하기 ↗",
     isFallback: true,
   };
 }
