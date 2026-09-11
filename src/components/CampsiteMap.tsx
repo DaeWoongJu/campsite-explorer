@@ -76,8 +76,12 @@ export default function CampsiteMap({
   // native DOM "click" on the same element did — so tap handling is done
   // entirely via a native listener on the container, using the Kakao
   // projection only as a coordinate-math helper (not an event source).
-  function handleContainerClick(e: MouseEvent) {
-    // Some mobile browsers emit two "click" events for a single tap.
+  function resolveTap(clientX: number, clientY: number, target: EventTarget | null) {
+    // Some mobile browsers treat a first tap on an element as a hover
+    // rather than a click (the "needs two taps" hover-emulation quirk),
+    // and/or fire both "touchend" and a synthetic "click" ~300ms later
+    // for the same physical tap. Debounce so double-firing does not
+    // double-process, but do NOT skip the first genuine tap.
     const now = Date.now();
     if (now - lastClickAtRef.current < 400) return;
     lastClickAtRef.current = now;
@@ -85,12 +89,12 @@ export default function CampsiteMap({
     // MarkerClusterer's cluster bubbles are plain DOM elements whose
     // text is just the count (e.g. "12"). Let Kakao's own click-to-zoom
     // handle those; only resolve individual-marker taps ourselves.
-    const targetText = (e.target as HTMLElement | null)?.textContent?.trim();
+    const targetText = (target as HTMLElement | null)?.textContent?.trim();
     if (targetText && /^\d+$/.test(targetText)) return;
 
     if (!containerRef.current || !mapRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const clickPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const clickPoint = { x: clientX - rect.left, y: clientY - rect.top };
     const projection = mapRef.current.getProjection();
 
     // Measured on a real device: a tap on the visible (round, upper)
@@ -151,7 +155,13 @@ export default function CampsiteMap({
           minLevel: 6,
           disableClickZoom: false,
         });
-        containerRef.current.addEventListener("click", handleContainerClick);
+        containerRef.current.addEventListener("click", (e) =>
+          resolveTap(e.clientX, e.clientY, e.target)
+        );
+        containerRef.current.addEventListener("touchend", (e) => {
+          const touch = e.changedTouches[0];
+          if (touch) resolveTap(touch.clientX, touch.clientY, e.target);
+        });
         window.kakao.maps.event.addListener(mapRef.current, "dragstart", () =>
           setPopup(null)
         );
