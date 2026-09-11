@@ -60,12 +60,12 @@ export default function CampsiteMap({
 
     const el = document.createElement("div");
     el.style.cssText =
-      "background:white;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.2);padding:10px;width:200px;font-family:inherit;position:relative;";
+      "background:white;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.2);padding:10px;width:200px;font-family:inherit;position:relative;pointer-events:auto;";
     el.innerHTML = `
-      <button aria-label="닫기" style="position:absolute;top:4px;right:6px;border:none;background:none;font-size:14px;cursor:pointer;color:#888;">✕</button>
+      <button aria-label="닫기" style="position:absolute;top:4px;right:6px;border:none;background:none;font-size:14px;cursor:pointer;color:#888;pointer-events:auto;">✕</button>
       <img src="${campsite.image}" alt="" style="width:100%;height:90px;object-fit:cover;border-radius:6px;margin-bottom:6px;" />
       <div style="font-size:13px;font-weight:600;color:#111;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${campsite.name}</div>
-      <button style="width:100%;background:#059669;color:white;border:none;border-radius:6px;padding:6px 0;font-size:12px;font-weight:600;cursor:pointer;">캠핑장 보기</button>
+      <button style="width:100%;background:#059669;color:white;border:none;border-radius:6px;padding:6px 0;font-size:12px;font-weight:600;cursor:pointer;pointer-events:auto;">캠핑장 보기</button>
     `;
     const [closeBtn, viewBtn] = el.querySelectorAll("button");
     closeBtn.addEventListener("click", (e) => {
