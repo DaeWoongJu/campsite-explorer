@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Campsite } from "@/lib/types";
 import CampsiteMap from "./CampsiteMap";
 
@@ -108,13 +108,16 @@ function CampsiteCard({
   selected: boolean;
   onHover: () => void;
 }) {
+  const router = useRouter();
+
   return (
     <div
       onMouseEnter={onHover}
-      className={`flex gap-3 rounded-xl border p-3 transition-colors ${
+      onClick={() => router.push(`/campsites/${campsite.id}`)}
+      className={`flex cursor-pointer gap-3 rounded-xl border p-3 transition-colors ${
         selected
           ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
-          : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+          : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
       }`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -126,12 +129,9 @@ function CampsiteCard({
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
-          <Link
-            href={`/campsites/${campsite.id}`}
-            className="truncate font-semibold text-zinc-900 hover:underline dark:text-zinc-50"
-          >
+          <span className="truncate font-semibold text-zinc-900 dark:text-zinc-50">
             {campsite.name}
-          </Link>
+          </span>
           {campsite.type && (
             <span className="flex-shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800">
               {campsite.type}
@@ -143,17 +143,15 @@ function CampsiteCard({
           {campsite.intro}
         </p>
         <div className="mt-auto flex items-center gap-3 pt-1">
-          <Link
-            href={`/campsites/${campsite.id}`}
-            className="text-xs font-medium text-emerald-600 hover:underline dark:text-emerald-400"
-          >
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
             자세히 보기
-          </Link>
+          </span>
           {campsite.homepage && (
             <a
               href={campsite.homepage}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
               className="text-xs font-medium text-zinc-500 hover:underline"
             >
               예약/홈페이지 ↗

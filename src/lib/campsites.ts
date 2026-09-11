@@ -60,8 +60,18 @@ function stripHtml(value: string): string {
 
 function extractFirstUrl(value?: string): string | null {
   if (!value) return null;
-  const match = value.match(/https?:\/\/[^\s"'<>]+/);
-  return match ? match[0] : null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const httpMatch = trimmed.match(/https?:\/\/[^\s"'<>]+/);
+  if (httpMatch) return httpMatch[0];
+
+  // Many entries store a bare domain like "www.example.com" with no protocol.
+  if (/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\/[^\s]*)?$/.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+
+  return null;
 }
 
 export function hasLiveApi(): boolean {
