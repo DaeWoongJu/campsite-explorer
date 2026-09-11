@@ -18,7 +18,8 @@ function loadDaumPostcode(): Promise<void> {
 
   postcodeLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.js";
+    script.src =
+      "https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
     script.async = true;
     script.onload = () => resolve();
     script.onerror = () => reject(new Error("Postcode script load failed"));
