@@ -30,6 +30,12 @@ function loadKakaoSdk(): Promise<void> {
   return sdkLoadPromise;
 }
 
+interface Popup {
+  campsite: Campsite;
+  x: number;
+  y: number;
+}
+
 export default function CampsiteMap({
   campsites,
   selectedId,
@@ -44,47 +50,19 @@ export default function CampsiteMap({
   const mapRef = useRef<any>(null);
   const clustererRef = useRef<any>(null);
   const markersRef = useRef<Record<string, any>>({});
-  const overlayRef = useRef<any>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "no-key" | "error">(
     KAKAO_KEY ? "loading" : "no-key"
   );
+  // Rendered as a normal React element on top of the map, instead of
+  // Kakao's CustomOverlay — a plain HTML string injected into Kakao's
+  // own DOM tree turned out to be unreliably clickable (its gesture
+  // layer intercepts taps before they reach nested buttons).
+  const [popup, setPopup] = useState<Popup | null>(null);
 
-  function closeOverlay() {
-    overlayRef.current?.setMap(null);
-    overlayRef.current = null;
-  }
-
-  function openOverlay(campsite: Campsite, marker: any) {
-    const kakao = window.kakao;
-    closeOverlay();
-
-    const el = document.createElement("div");
-    el.style.cssText =
-      "background:white;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.2);padding:10px;width:200px;font-family:inherit;position:relative;pointer-events:auto;";
-    el.innerHTML = `
-      <button aria-label="닫기" style="position:absolute;top:4px;right:6px;border:none;background:none;font-size:14px;cursor:pointer;color:#888;pointer-events:auto;">✕</button>
-      <img src="${campsite.image}" alt="" style="width:100%;height:90px;object-fit:cover;border-radius:6px;margin-bottom:6px;" />
-      <div style="font-size:13px;font-weight:600;color:#111;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${campsite.name}</div>
-      <button style="width:100%;background:#059669;color:white;border:none;border-radius:6px;padding:6px 0;font-size:12px;font-weight:600;cursor:pointer;pointer-events:auto;">캠핑장 보기</button>
-    `;
-    const [closeBtn, viewBtn] = el.querySelectorAll("button");
-    closeBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeOverlay();
-    });
-    viewBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      router.push(`/campsites/${campsite.id}`);
-    });
-
-    const overlay = new kakao.maps.CustomOverlay({
-      content: el,
-      position: marker.getPosition(),
-      yAnchor: 1.3,
-      zIndex: 9999,
-    });
-    overlay.setMap(mapRef.current);
-    overlayRef.current = overlay;
+  function showPopup(campsite: Campsite, marker: any) {
+    const projection = mapRef.current.getProjection();
+    const point = projection.pointFromCoords(marker.getPosition());
+    setPopup({ campsite, x: point.x, y: point.y });
   }
 
   useEffect(() => {
@@ -106,7 +84,13 @@ export default function CampsiteMap({
           disableClickZoom: false,
         });
         window.kakao.maps.event.addListener(mapRef.current, "click", () =>
-          closeOverlay()
+          setPopup(null)
+        );
+        window.kakao.maps.event.addListener(mapRef.current, "dragstart", () =>
+          setPopup(null)
+        );
+        window.kakao.maps.event.addListener(mapRef.current, "zoom_changed", () =>
+          setPopup(null)
         );
         setStatus("ready");
       })
@@ -139,7 +123,7 @@ export default function CampsiteMap({
 
     clustererRef.current.clear();
     markersRef.current = {};
-    closeOverlay();
+    setPopup(null);
 
     const markers = campsites
       .filter((c) => !Number.isNaN(c.lat) && !Number.isNaN(c.lng))
@@ -149,7 +133,7 @@ export default function CampsiteMap({
         });
         kakao.maps.event.addListener(marker, "click", () => {
           onSelect?.(c.id);
-          openOverlay(c, marker);
+          showPopup(c, marker);
         });
         markersRef.current[c.id] = marker;
         return marker;
@@ -188,5 +172,43 @@ export default function CampsiteMap({
     );
   }
 
-  return <div ref={containerRef} className="h-full w-full rounded-lg" />;
+  return (
+    <div className="relative h-full w-full">
+      <div ref={containerRef} className="h-full w-full rounded-lg" />
+      {popup && (
+        <div
+          style={{
+            position: "absolute",
+            left: popup.x,
+            top: popup.y,
+            transform: "translate(-50%, -130%)",
+          }}
+          className="w-[200px] rounded-lg bg-white p-2.5 shadow-lg dark:bg-zinc-900"
+        >
+          <button
+            aria-label="닫기"
+            onClick={() => setPopup(null)}
+            className="absolute right-1.5 top-1 text-sm text-zinc-400 hover:text-zinc-600"
+          >
+            ✕
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={popup.campsite.image}
+            alt=""
+            className="mb-1.5 h-[90px] w-full rounded-md object-cover"
+          />
+          <div className="mb-1.5 truncate text-[13px] font-semibold text-zinc-900 dark:text-zinc-50">
+            {popup.campsite.name}
+          </div>
+          <button
+            onClick={() => router.push(`/campsites/${popup.campsite.id}`)}
+            className="w-full rounded-md bg-emerald-600 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+          >
+            캠핑장 보기
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
