@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getReviews, addReview } from "@/lib/reviews";
+import { getReviews, addReview, deleteReview } from "@/lib/reviews";
+import { isValidSession, ADMIN_COOKIE } from "@/lib/admin-auth";
 
 export async function GET(
   _request: NextRequest,
@@ -37,4 +38,23 @@ export async function POST(
   }
 
   return NextResponse.json({ review }, { status: 201 });
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: RouteContext<"/api/reviews/[id]">
+) {
+  const { id } = await params;
+  const authed = isValidSession(request.cookies.get(ADMIN_COOKIE)?.value);
+  if (!authed) {
+    return NextResponse.json({ error: "관리자만 삭제할 수 있어요." }, { status: 403 });
+  }
+
+  const reviewId = request.nextUrl.searchParams.get("reviewId");
+  if (!reviewId) {
+    return NextResponse.json({ error: "reviewId가 필요해요." }, { status: 400 });
+  }
+
+  const ok = await deleteReview(id, reviewId);
+  return NextResponse.json({ ok });
 }

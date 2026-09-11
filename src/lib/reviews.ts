@@ -15,8 +15,9 @@ function reviewsKey(campsiteId: string): string {
 export async function getReviews(campsiteId: string): Promise<Review[]> {
   const redis = getRedis();
   if (!redis) return [];
-  const raw = await redis.lrange<Review>(reviewsKey(campsiteId), 0, -1);
-  return raw;
+  const map = await redis.hgetall<Record<string, Review>>(reviewsKey(campsiteId));
+  if (!map) return [];
+  return Object.values(map).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function addReview(
@@ -34,6 +35,16 @@ export async function addReview(
     createdAt: new Date().toISOString(),
   };
 
-  await redis.lpush(reviewsKey(campsiteId), review);
+  await redis.hset(reviewsKey(campsiteId), { [review.id]: review });
   return review;
+}
+
+export async function deleteReview(
+  campsiteId: string,
+  reviewId: string
+): Promise<boolean> {
+  const redis = getRedis();
+  if (!redis) return false;
+  const removed = await redis.hdel(reviewsKey(campsiteId), reviewId);
+  return removed > 0;
 }

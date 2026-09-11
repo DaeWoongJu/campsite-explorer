@@ -3,7 +3,13 @@
 import { useEffect, useState, FormEvent } from "react";
 import { Review } from "@/lib/reviews";
 
-export default function ReviewSection({ campsiteId }: { campsiteId: string }) {
+export default function ReviewSection({
+  campsiteId,
+  isAdmin = false,
+}: {
+  campsiteId: string;
+  isAdmin?: boolean;
+}) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [author, setAuthor] = useState("");
@@ -51,6 +57,17 @@ export default function ReviewSection({ campsiteId }: { campsiteId: string }) {
       );
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleDelete(reviewId: string) {
+    if (!confirm("이 리뷰를 삭제할까요?")) return;
+    const res = await fetch(
+      `/api/reviews/${campsiteId}?reviewId=${encodeURIComponent(reviewId)}`,
+      { method: "DELETE" }
+    );
+    if (res.ok) {
+      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
     }
   }
 
@@ -124,7 +141,19 @@ export default function ReviewSection({ campsiteId }: { campsiteId: string }) {
           >
             <div className="flex items-center justify-between">
               <span className="font-medium">{r.author}</span>
-              <span className="text-sm text-amber-500">{"★".repeat(r.rating)}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-amber-500">
+                  {"★".repeat(r.rating)}
+                </span>
+                {isAdmin && (
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    className="text-xs text-red-500 hover:underline"
+                  >
+                    삭제
+                  </button>
+                )}
+              </div>
             </div>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               {r.content}

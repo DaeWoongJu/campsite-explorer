@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { getCampsiteById, getCampsiteImages } from "@/lib/campsites";
 import { getReservationLinks } from "@/lib/links";
+import { isValidSession, ADMIN_COOKIE } from "@/lib/admin-auth";
 import CampsiteMap from "@/components/CampsiteMap";
 import PhotoGallery from "@/components/PhotoGallery";
 import ReviewSection from "@/components/ReviewSection";
@@ -10,11 +12,13 @@ export default async function CampsiteDetailPage(
   props: PageProps<"/campsites/[id]">
 ) {
   const { id } = await props.params;
-  const [campsite, extraImages] = await Promise.all([
+  const [campsite, extraImages, cookieStore] = await Promise.all([
     getCampsiteById(id),
     getCampsiteImages(id),
+    cookies(),
   ]);
   if (!campsite) notFound();
+  const isAdmin = isValidSession(cookieStore.get(ADMIN_COOKIE)?.value);
   const reservations = getReservationLinks(campsite);
   const images = Array.from(
     new Set([campsite.image, ...extraImages].filter(Boolean))
@@ -84,7 +88,7 @@ export default async function CampsiteDetailPage(
           <CampsiteMap campsites={[campsite]} selectedId={campsite.id} />
         </div>
 
-        <ReviewSection campsiteId={campsite.id} />
+        <ReviewSection campsiteId={campsite.id} isAdmin={isAdmin} />
       </div>
     </div>
   );
