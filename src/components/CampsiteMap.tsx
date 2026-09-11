@@ -60,7 +60,6 @@ export default function CampsiteMap({
   // own DOM tree turned out to be unreliably clickable (its gesture
   // layer intercepts taps before they reach nested buttons).
   const [popup, setPopup] = useState<Popup | null>(null);
-  const [debugMsg, setDebugMsg] = useState<string>("(아직 탭 없음)");
 
   function showPopup(campsite: Campsite) {
     const projection = mapRef.current.getProjection();
@@ -70,19 +69,19 @@ export default function CampsiteMap({
     setPopup({ campsite, x: point.x, y: point.y });
   }
 
-  // Kakao's per-marker "click" event turned out not to reliably fire
-  // from real touch taps once markers are managed by MarkerClusterer
-  // (cluster-bubble taps worked fine; individual marker taps did not,
-  // even on a single isolated marker). Instead, resolve taps on the
-  // map itself to whichever campsite is nearest the tapped point.
-  function handleMapClick(mouseEvent: any) {
-    setDebugMsg(`click fired @ ${new Date().toLocaleTimeString()}`);
+  // Kakao's own event system (kakao.maps.event.addListener(map, "click", ...))
+  // did not reliably fire on some real mobile browsers even though the
+  // native DOM "click" on the same element did — so tap handling is done
+  // entirely via a native listener on the container, using the Kakao
+  // projection only as a coordinate-math helper (not an event source).
+  function handleContainerClick(e: MouseEvent) {
+    if (!containerRef.current || !mapRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const clickPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     const projection = mapRef.current.getProjection();
-    const clickPoint = projection.containerPointFromCoords(mouseEvent.latLng);
 
     let nearest: Campsite | null = null;
     let nearestDist = 32; // px — generous touch target
-    let closestSeen = Infinity;
 
     for (const c of campsitesRef.current) {
       if (Number.isNaN(c.lat) || Number.isNaN(c.lng)) continue;
@@ -90,16 +89,11 @@ export default function CampsiteMap({
         new window.kakao.maps.LatLng(c.lat, c.lng)
       );
       const dist = Math.hypot(p.x - clickPoint.x, p.y - clickPoint.y);
-      if (dist < closestSeen) closestSeen = dist;
       if (dist < nearestDist) {
         nearestDist = dist;
         nearest = c;
       }
     }
-
-    setDebugMsg(
-      `click @ (${Math.round(clickPoint.x)},${Math.round(clickPoint.y)}) closest=${Math.round(closestSeen)}px matched=${nearest ? nearest.name : "none"}`
-    );
 
     if (nearest) {
       onSelect?.(nearest.id);
@@ -127,16 +121,7 @@ export default function CampsiteMap({
           minLevel: 6,
           disableClickZoom: false,
         });
-        window.kakao.maps.event.addListener(
-          mapRef.current,
-          "click",
-          handleMapClick
-        );
-        containerRef.current.addEventListener(
-          "click",
-          () => setDebugMsg((m) => `native DOM click fired | ${m}`),
-          { capture: true }
-        );
+        containerRef.current.addEventListener("click", handleContainerClick);
         window.kakao.maps.event.addListener(mapRef.current, "dragstart", () =>
           setPopup(null)
         );
@@ -221,12 +206,6 @@ export default function CampsiteMap({
 
   return (
     <div className="relative h-full w-full">
-      <div
-        style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 50 }}
-        className="break-words bg-black/80 p-1 text-[10px] text-white"
-      >
-        DEBUG: {debugMsg}
-      </div>
       <div ref={containerRef} className="h-full w-full rounded-lg" />
       {popup && (
         <div
