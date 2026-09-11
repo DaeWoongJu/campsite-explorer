@@ -60,7 +60,7 @@ export default function CampsiteMap({
   // own DOM tree turned out to be unreliably clickable (its gesture
   // layer intercepts taps before they reach nested buttons).
   const [popup, setPopup] = useState<Popup | null>(null);
-  const [debugMsg, setDebugMsg] = useState<string>("(아직 탭 없음)");
+  const lastClickAtRef = useRef(0);
 
   function showPopup(campsite: Campsite) {
     const projection = mapRef.current.getProjection();
@@ -76,44 +76,36 @@ export default function CampsiteMap({
   // entirely via a native listener on the container, using the Kakao
   // projection only as a coordinate-math helper (not an event source).
   function handleContainerClick(e: MouseEvent) {
-    try {
-      if (!containerRef.current || !mapRef.current) {
-        setDebugMsg("no container/map ref");
-        return;
+    // Some mobile browsers emit two "click" events for a single tap.
+    const now = Date.now();
+    if (now - lastClickAtRef.current < 400) return;
+    lastClickAtRef.current = now;
+
+    if (!containerRef.current || !mapRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const clickPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const projection = mapRef.current.getProjection();
+
+    let nearest: Campsite | null = null;
+    let nearestDist = 32; // px — generous touch target
+
+    for (const c of campsitesRef.current) {
+      if (Number.isNaN(c.lat) || Number.isNaN(c.lng)) continue;
+      const p = projection.containerPointFromCoords(
+        new window.kakao.maps.LatLng(c.lat, c.lng)
+      );
+      const dist = Math.hypot(p.x - clickPoint.x, p.y - clickPoint.y);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = c;
       }
-      const rect = containerRef.current.getBoundingClientRect();
-      const clickPoint = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      const projection = mapRef.current.getProjection();
+    }
 
-      let nearest: Campsite | null = null;
-      let nearestDist = 32; // px — generous touch target
-      let closestSeen = Infinity;
-
-      for (const c of campsitesRef.current) {
-        if (Number.isNaN(c.lat) || Number.isNaN(c.lng)) continue;
-        const p = projection.containerPointFromCoords(
-          new window.kakao.maps.LatLng(c.lat, c.lng)
-        );
-        const dist = Math.hypot(p.x - clickPoint.x, p.y - clickPoint.y);
-        if (dist < closestSeen) closestSeen = dist;
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearest = c;
-        }
-      }
-
-      const msg = `[${new Date().toLocaleTimeString()}] click=(${Math.round(clickPoint.x)},${Math.round(clickPoint.y)}) closest=${Math.round(closestSeen)}px matched=${nearest ? "Y" : "N"}`;
-      setDebugMsg((prev) => `${msg}\n${prev}`.slice(0, 400));
-
-      if (nearest) {
-        onSelect?.(nearest.id);
-        showPopup(nearest);
-        setDebugMsg((prev) => `${msg} -> showPopup called\n${prev}`.slice(0, 400));
-      } else {
-        setPopup(null);
-      }
-    } catch (err: any) {
-      setDebugMsg(`ERROR: ${err?.message || String(err)}`);
+    if (nearest) {
+      onSelect?.(nearest.id);
+      showPopup(nearest);
+    } else {
+      setPopup(null);
     }
   }
 
@@ -220,52 +212,35 @@ export default function CampsiteMap({
 
   return (
     <div className="relative h-full w-full">
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 50,
-          whiteSpace: "pre-line",
-        }}
-        className="break-words bg-black/80 p-1 text-[10px] text-white"
-      >
-        popup={popup ? `${popup.campsite.name} @ (${Math.round(popup.x)},${Math.round(popup.y)})` : "null"}
-        {"\n"}
-        {debugMsg}
-      </div>
       <div ref={containerRef} className="h-full w-full rounded-lg" />
       {popup && (
         <div
           style={{
-            position: "fixed",
-            top: 8,
-            right: 8,
-            zIndex: 999,
-            background: "red",
-            color: "white",
-            padding: "4px 8px",
-            fontSize: 10,
-          }}
-        >
-          POPUP STATE IS ON
-        </div>
-      )}
-      {popup && (
-        <div
-          style={{
             position: "absolute",
-            left: popup.x,
-            top: popup.y,
+            left: Math.max(105, popup.x),
+            top: Math.max(170, popup.y),
             transform: "translate(-50%, -130%)",
+            width: 200,
+            background: "white",
+            borderRadius: 10,
+            padding: 10,
+            boxShadow: "0 2px 10px rgba(0,0,0,.25)",
+            zIndex: 40,
           }}
-          className="w-[200px] rounded-lg bg-white p-2.5 shadow-lg dark:bg-zinc-900"
         >
           <button
             aria-label="닫기"
             onClick={() => setPopup(null)}
-            className="absolute right-1.5 top-1 text-sm text-zinc-400 hover:text-zinc-600"
+            style={{
+              position: "absolute",
+              right: 6,
+              top: 4,
+              border: "none",
+              background: "none",
+              fontSize: 14,
+              cursor: "pointer",
+              color: "#888",
+            }}
           >
             ✕
           </button>
@@ -273,14 +248,41 @@ export default function CampsiteMap({
           <img
             src={popup.campsite.image}
             alt=""
-            className="mb-1.5 h-[90px] w-full rounded-md object-cover"
+            style={{
+              width: "100%",
+              height: 90,
+              objectFit: "cover",
+              borderRadius: 6,
+              marginBottom: 6,
+              display: "block",
+            }}
           />
-          <div className="mb-1.5 truncate text-[13px] font-semibold text-zinc-900 dark:text-zinc-50">
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#111",
+              marginBottom: 6,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
             {popup.campsite.name}
           </div>
           <button
             onClick={() => router.push(`/campsites/${popup.campsite.id}`)}
-            className="w-full rounded-md bg-emerald-600 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+            style={{
+              width: "100%",
+              background: "#059669",
+              color: "white",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 0",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
           >
             캠핑장 보기
           </button>
